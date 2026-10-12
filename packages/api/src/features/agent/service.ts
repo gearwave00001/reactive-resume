@@ -1489,6 +1489,15 @@ export const agentService = {
 									}
 								},
 								onError: (error) => {
+									// One greppable line per failed run: the stream's own error is only visible in the browser.
+									console.error(
+										JSON.stringify({
+											evt: "agent.error",
+											threadId: input.threadId,
+											error: error instanceof Error ? error.message : String(error),
+											stack: error instanceof Error ? error.stack : undefined,
+										}),
+									);
 									const message = error instanceof Error ? error.message : "Agent run failed.";
 									return runnableProvider.apiKey ? message.replaceAll(runnableProvider.apiKey, "***") : message;
 								},
