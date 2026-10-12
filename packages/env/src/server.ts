@@ -160,6 +160,8 @@ export const env = createEnv({
 		AI_MODEL: z.string().trim().min(1).optional(),
 		AI_API_KEY: z.string().trim().min(1).optional(),
 		AI_BASE_URL: z.url({ protocol: /^https?$/ }).optional(),
+		// Output budget per assistant step; raise it when a reasoning model's propose_edits calls get truncated.
+		AI_AGENT_MAX_OUTPUT_TOKENS: z.coerce.number().int().min(1024).max(131_072).default(8_192),
 
 		// Feature Flags
 		FLAG_DISABLE_SIGNUPS: z.stringbool().default(false),
