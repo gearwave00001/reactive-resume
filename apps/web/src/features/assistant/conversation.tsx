@@ -509,8 +509,8 @@ function ToolPartView({
 								)
 							}
 							onAccept={(chosen) => {
-								document.accept(chosen);
-								onRecord(message, part, chosen, "accepted");
+								const applied = document.accept(chosen);
+								if (applied.length > 0) onRecord(message, part, applied, "accepted");
 							}}
 							onReject={(chosen) => onRecord(message, part, chosen, "rejected")}
 						/>

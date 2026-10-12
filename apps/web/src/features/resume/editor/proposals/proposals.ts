@@ -3,6 +3,7 @@ import type { ResumeData } from "@reactive-resume/schema/resume/data";
 import { t } from "@lingui/core/macro";
 import { produce } from "immer";
 import {
+	applicationOrder,
 	applyProposal,
 	applyTo,
 	getProposalState,
@@ -66,16 +67,26 @@ export function markProposals(data: ResumeData, proposals: readonly Proposal[]):
 	});
 }
 
-/** Applies proposals to the resume as one undo step; the toast's Undo takes them back, and they show as pending again. */
-export function acceptResumeProposals(proposals: readonly Proposal[]) {
+/**
+ * Applies proposals to the resume as one undo step; the toast's Undo takes them back, and they show as pending
+ * again. Additions are applied before the edits anchored on the same passage, so a rewrite of that passage and
+ * an addition after it both land. Returns the proposals that actually changed the document.
+ */
+export function acceptResumeProposals(proposals: readonly Proposal[]): Proposal[] {
+	const applied: Proposal[] = [];
 	useResumeStore.getState().updateResumeData(
 		(draft) => {
-			for (const proposal of proposals) applyProposal(draft, proposal);
+			for (const proposal of applicationOrder(proposals)) {
+				if (applyProposal(draft, proposal)) applied.push(proposal);
+			}
 		},
 		{ newStep: true },
 	);
-	toast.add({
-		description: proposals.length === 1 ? t`Edit applied` : t`${proposals.length} edits applied`,
-		actionProps: { children: t`Undo`, onClick: () => useResumeStore.getState().undo() },
-	});
+	if (applied.length > 0) {
+		toast.add({
+			description: applied.length === 1 ? t`Edit applied` : t`${applied.length} edits applied`,
+			actionProps: { children: t`Undo`, onClick: () => useResumeStore.getState().undo() },
+		});
+	}
+	return applied;
 }

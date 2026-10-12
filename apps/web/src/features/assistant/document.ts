@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { useMemo } from "react";
 import {
+	applicationOrder,
 	applyTo,
 	collectLetterPassages,
 	collectPassages,
@@ -28,8 +29,8 @@ export type AssistantDocument = {
 	posting: { id: string; company: string; role: string } | null;
 	/** A proposal's state against the document as it reads now. */
 	stateOf: (proposal: Proposal) => ProposalState;
-	/** Applies proposals as one undo step, with Undo in the toast. */
-	accept: (proposals: readonly Proposal[]) => void;
+	/** Applies proposals as one undo step, with Undo in the toast; returns the ones that changed the document. */
+	accept: (proposals: readonly Proposal[]) => Proposal[];
 	/** Where a proposal lands, in the app's language, when its passage is still there. */
 	locationOf: (proposal: Pick<Proposal, "before" | "target">) => string | undefined;
 };
@@ -102,14 +103,22 @@ export function useLetterAssistantDocument(): AssistantDocument | null {
 			stateOf: (proposal) => getStateIn(letter.content, proposal),
 			accept: (proposals) => {
 				const { letter: current, edit } = useLetterEditorStore.getState();
-				if (!current) return;
+				if (!current) return [];
 				const before = current.content;
-				const content = proposals.reduce((value, proposal) => applyTo(value, proposal) ?? value, before);
+				const applied: Proposal[] = [];
+				const content = applicationOrder(proposals).reduce((value, proposal) => {
+					const next = applyTo(value, proposal);
+					if (next === undefined) return value;
+					applied.push(proposal);
+					return next;
+				}, before);
+				if (applied.length === 0) return applied;
 				edit({ content });
 				toast.add({
-					description: proposals.length === 1 ? t`Edit applied` : t`${proposals.length} edits applied`,
+					description: applied.length === 1 ? t`Edit applied` : t`${applied.length} edits applied`,
 					actionProps: { children: t`Undo`, onClick: () => edit({ content: before }) },
 				});
+				return applied;
 			},
 			locationOf: (proposal) => locate(passages, proposal),
 		};

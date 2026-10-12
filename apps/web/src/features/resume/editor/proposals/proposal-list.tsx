@@ -35,9 +35,10 @@ export function ProposalList({ proposals, data, onSuggestAgain }: ProposalListPr
 			states={proposals.map((proposal) => getProposalState(data, proposal))}
 			locked={locked}
 			onAccept={(accepted) => {
-				acceptResumeProposals(accepted);
+				const applied = acceptResumeProposals(accepted);
+				if (applied.length === 0) return;
 				setProposalStatus(
-					accepted.map((proposal) => proposal.id),
+					applied.map((proposal) => proposal.id),
 					"accepted",
 				);
 			}}

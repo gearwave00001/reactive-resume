@@ -103,6 +103,23 @@ export function applyProposal(draft: ResumeData, proposal: Proposal): boolean {
 	return true;
 }
 
+/** An addition keeps its `before` at the start of its `after`; a rewrite replaces it. */
+const isAddition = (proposal: Proposal) =>
+	proposal.after.startsWith(proposal.before) && proposal.after !== proposal.before;
+
+/**
+ * An order in which proposals can be applied together. An addition keeps its anchor passage inside its
+ * `before`, while a rewrite of that same passage destroys it: additions therefore go first, and the
+ * rewrites that follow still find their anchor. Additions also chain — one added after a passage another
+ * proposal rewrote still applies. Proposals keep the order they came in within each phase.
+ */
+export function applicationOrder(proposals: readonly Proposal[]): Proposal[] {
+	return [
+		...proposals.filter((proposal) => isAddition(proposal)),
+		...proposals.filter((proposal) => !isAddition(proposal)),
+	];
+}
+
 const BLOCK = /^(<(p|li)(?:\s[^>]*)?>)([\s\S]*)(<\/\2>)$/i;
 
 /** A block's opening tag, contents and closing tag; `undefined` for anything else. */

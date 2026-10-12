@@ -1,7 +1,16 @@
+import type { ProposalTarget } from "./proposals";
 import { describe, expect, it } from "vitest";
 import { experienceItemSchema } from "@reactive-resume/schema/resume/data";
 import { defaultResumeData } from "@reactive-resume/schema/resume/default";
-import { additionAfter, applyProposal, applyTo, collectLetterPassages, collectPassages, readTarget } from "./proposals";
+import {
+	additionAfter,
+	applicationOrder,
+	applyProposal,
+	applyTo,
+	collectLetterPassages,
+	collectPassages,
+	readTarget,
+} from "./proposals";
 
 const labels = { body: "Letter", bullet: (n: number) => `bullet ${n}`, paragraph: (n: number) => `paragraph ${n}` };
 
@@ -85,6 +94,54 @@ describe("additionAfter", () => {
 			after: "<p>One</p><p>Between</p>",
 		});
 		expect(additionAfter("<p>One</p>", "<p>Gone</p>", "x")).toBeUndefined();
+	});
+});
+
+describe("applicationOrder", () => {
+	const target: ProposalTarget = { sectionId: "experience", itemId: "lumen", field: "description" };
+	const proposal = (id: string, before: string, after: string, at: ProposalTarget = target) => ({
+		id,
+		target: at,
+		location: id,
+		before,
+		after,
+		why: "",
+		status: "pending" as const,
+		source: "assistant" as const,
+	});
+
+	it("applies an addition before the rewrite of the passage it is anchored on", () => {
+		// As resolveEdits places them: the addition carries its anchor in `before`, the rewrite does not.
+		const rewrite = proposal("rewrite", "<p>Old</p>", "<p>New</p>");
+		const addition = proposal("addition", "<p>Old</p></li>", "<p>Old</p></li><li><p>Extra</p></li>");
+
+		expect(applicationOrder([rewrite, addition]).map((item) => item.id)).toEqual(["addition", "rewrite"]);
+
+		const field = "<ul><li><p>Old</p></li></ul>";
+		const value = applicationOrder([rewrite, addition]).reduce((text, item) => applyTo(text, item) ?? text, field);
+		expect(value).toBe("<ul><li><p>New</p></li><li><p>Extra</p></li></ul>");
+	});
+
+	it("keeps the order of proposals that do not overlap, in the same or another field", () => {
+		const first = proposal("first", "<p>One</p>", "<p>One!</p>");
+		const second = proposal("second", "<p>Two</p>", "<p>Two!</p>");
+		const other = proposal("other", "<p>One</p>", "<p>One!</p>", { sectionId: "summary", field: "content" });
+
+		expect(applicationOrder([first, second, other]).map((item) => item.id)).toEqual(["first", "second", "other"]);
+	});
+
+	it("applies an addition first when two proposals share an anchor exactly", () => {
+		const rewrite = proposal("rewrite", "<p>Old</p>", "<p>New</p>");
+		const addition = proposal("addition", "<p>Old</p>", "<p>Old</p><p>Extra</p>");
+
+		expect(applicationOrder([rewrite, addition]).map((item) => item.id)).toEqual(["addition", "rewrite"]);
+	});
+
+	it("does not treat an empty passage's empty before as an anchor held by everything", () => {
+		const empty = proposal("empty", "", "<p>Written.</p>", { sectionId: "summary", field: "content" });
+		const later = proposal("later", "<p>Old</p>", "<p>New</p>", { sectionId: "summary", field: "content" });
+
+		expect(applicationOrder([empty, later]).map((item) => item.id)).toEqual(["empty", "later"]);
 	});
 });
 

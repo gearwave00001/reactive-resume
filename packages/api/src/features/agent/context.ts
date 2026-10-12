@@ -9,8 +9,10 @@ import { estimateTokenCount as estimateTextTokenCount } from "tokenx";
 const AGENT_CONTEXT_TOKEN_BUDGET = 40_000;
 
 const SNAPSHOT_TOOL_NAMES = new Set(["read_resume", "read_letter", "apply_resume_patch"]);
+// Names only the read tools: apply_resume_patch appears here just because old conversations hold its
+// snapshots; today's agent has propose_edits and must not be led to think a patch tool exists.
 const SUPERSEDED_SNAPSHOT_NOTE =
-	"Superseded document snapshot removed. Base further edits on the latest read_resume, read_letter or apply_resume_patch result.";
+	"Superseded document snapshot removed. Base further edits on the latest read_resume or read_letter result.";
 const PRUNED_TOOL_RESULT_NOTE = "Older tool result pruned to fit the context budget.";
 
 type LoosePart = Record<string, unknown> & { type: string };

@@ -36,7 +36,7 @@ const document: AssistantDocument = {
 	locked: false,
 	posting: { id: "application-2", company: "Selected Company", role: "Engineer" },
 	stateOf: () => "pending",
-	accept: () => {},
+	accept: () => [],
 	locationOf: () => undefined,
 };
 beforeEach(() => {
